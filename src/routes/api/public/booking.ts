@@ -117,6 +117,38 @@ export const Route = createFileRoute("/api/public/booking")({
         const row = (rows as any[])?.[0];
         if (!row) return json({ ok: false, error: "no_result" }, 500);
         if (row.error) return json({ ok: false, error: row.error as string }, 409);
+
+        // Umbuchung: die Terminerinnerungen sind pro Bewerbung + Art gesperrt
+        // (application_id, reminder_kind ist eindeutig). Ohne Aufräumen gilt die
+        // Erinnerung des ALTEN Termins als "schon verschickt" und der Bewerber
+        // bekommt für den neuen Termin nie mehr die 24h-/30-Minuten-Mail.
+        try {
+          const { data: appRow } = await supabaseAdmin
+            .from("applications")
+            .select("id")
+            .eq("magic_token", parsed.data.token)
+            .maybeSingle();
+          const applicationId = (appRow as any)?.id as string | undefined;
+          if (applicationId) {
+            const { error: cleanupError } = await supabaseAdmin
+              .from("application_reminder_log")
+              .delete()
+              .eq("application_id", applicationId)
+              .in("reminder_kind", [
+                "interview_invite_30min",
+                "interview_reminder_24h",
+                "no_show_24h",
+                "rebook_after_cancel_24h",
+                "rebook_after_cancel_72h",
+              ]);
+            if (cleanupError) {
+              console.warn("[booking] reminder_log_cleanup_failed", cleanupError.message);
+            }
+          }
+        } catch (e) {
+          console.warn("[booking] reminder_log_cleanup_error", e);
+        }
+
         return json({
           ok: true,
           appointment_id: row.appointment_id,
