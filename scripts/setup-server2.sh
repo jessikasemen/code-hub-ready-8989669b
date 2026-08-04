@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────
-REPO_URL="${REPO_URL:-https://github.com/jessikasemen/code-hub-ready.git}"
+REPO_URL="${REPO_URL:-https://github.com/jessikasemen/code-hub-ready-8989669b.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 PROJECT_DIR="${PROJECT_DIR:-/opt/apps/portal}"
 # Alle Domains, die auf dieses Portal zeigen (space-separated)
