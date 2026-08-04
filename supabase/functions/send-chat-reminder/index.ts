@@ -186,6 +186,31 @@ serve(async (req) => {
       return json({ success: true, skipped: true, reason: allowance.reason }, 200);
     }
 
+    // 🔒 Atomare Reservierung: max. eine Chat-Erinnerung pro Empfänger und Tag.
+    // Zwei gleichzeitige Klicks können die 24h-Prüfung oben überholen — der
+    // eindeutige event_key in der Datenbank kann das nicht.
+    const dayBucket = new Date().toISOString().slice(0, 10);
+    const claim: EmailClaim | null = await claimEmailEvent(admin, {
+      eventKey: `chat_reminder:${userId}:${dayBucket}`,
+      templateName: "chat_reminder",
+      recipient: to,
+      tenantId: tenant.id,
+      senderEmail,
+      subject,
+      html,
+      metadata: {
+        user_id: userId, unread_count: unreadCount, tenant_id: tenant.id,
+        sender_kind: "fasttrack_chat_reminder", resolved_tenant_id: tenant.id,
+        source: "send-chat-reminder",
+      },
+    });
+    if (!claim) {
+      return json({
+        error: "Für heute wurde bereits eine Erinnerung an diese Adresse gesendet.",
+        skipped: true,
+      }, 200);
+    }
+
     try {
       const info = await transporter.sendMail({
         from: `"${senderName}" <${senderEmail}>`,
@@ -194,29 +219,23 @@ serve(async (req) => {
         subject,
         html,
       });
-      await admin.from("email_send_log").insert({
-        tenant_id: tenant.id,
-        template_name: "chat_reminder",
-        recipient_email: to,
+      await finishEmailClaim(admin, claim, {
         status: "sent",
-        rendered_subject: subject,
-        rendered_html: html,
-        sender_email: senderEmail,
-        metadata: { message_id: info?.messageId ?? null, unread_count: unreadCount, user_id: userId, tenant_id: tenant.id, sender_kind: "fasttrack_chat_reminder", resolved_tenant_id: tenant.id },
+        metadata: {
+          message_id: info?.messageId ?? null, unread_count: unreadCount, user_id: userId,
+          tenant_id: tenant.id, sender_kind: "fasttrack_chat_reminder", resolved_tenant_id: tenant.id,
+          source: "send-chat-reminder",
+        },
       });
       return json({ success: true, unread: unreadCount }, 200);
 
     } catch (sendErr: any) {
       const reason = String(sendErr?.message ?? sendErr);
-      await admin.from("email_send_log").insert({
-        tenant_id: tenant.id,
-        template_name: "chat_reminder",
-        recipient_email: to,
-        status: "failed",
-        error_message: reason,
-        rendered_subject: subject,
-        rendered_html: html,
-        sender_email: senderEmail,
+      // Fehlgeschlagen → Reservierung freigeben, damit ein erneuter Versuch
+      // möglich bleibt (die Zeile bleibt als Historie erhalten).
+      await releaseEmailClaim(admin, claim, {
+        reason,
+        metadata: { user_id: userId, tenant_id: tenant.id, source: "send-chat-reminder" },
       });
       return json({ error: `Versand fehlgeschlagen: ${reason}` }, 502);
     }
