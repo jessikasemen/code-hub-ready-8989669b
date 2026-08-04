@@ -278,7 +278,8 @@ function AdminEmailCenterPage() {
   const exportCsv = () => {
     const head = ["Zeitpunkt", "Mandant", "Template", "Empfaenger", "Status", "Fehler"];
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const body = rows.map(r => [
+    // Export enthält bewusst ALLE Zeilen inkl. bereinigter Doppelungen.
+    const body = allRows.map(r => [
       new Date(r.created_at).toLocaleString("de-DE"),
       tenantNames[r.tenant_id ?? ""] ?? "",
       r.template_name,
@@ -367,7 +368,8 @@ function AdminEmailCenterPage() {
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    return rows.filter(r => {
+    const base = showTechnical ? allRows : rows;
+    return base.filter(r => {
       if (tenantFilter && (r.tenant_id ?? "") !== tenantFilter) return false;
       if (!ql) return true;
       return (
@@ -377,7 +379,7 @@ function AdminEmailCenterPage() {
         (tenantNames[r.tenant_id ?? ""] ?? "").toLowerCase().includes(ql)
       );
     });
-  }, [rows, q, tenantFilter, tenantNames]);
+  }, [rows, allRows, showTechnical, q, tenantFilter, tenantNames]);
   const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
 
   return (
