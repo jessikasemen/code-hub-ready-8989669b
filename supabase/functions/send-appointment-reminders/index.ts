@@ -462,9 +462,14 @@ serve(async (req) => {
 
 
       // Letzte Sicherung gegen Doppelversand (unabhängig von der Vorauswahl).
+      // Eindeutiger Schlüssel dieses Ereignisses: Art + Bewerbung + Terminzeit.
+      // Nach einer Umbuchung ändert sich scheduled_at → neue Erinnerung erlaubt.
+      const reminderEventKey = `${kind}:${a.id}:${a.scheduled_at}`;
       const dup = forced ? { duplicate: false, reason: "" } : await isDuplicateSend(admin, {
         applicationId: a.id, kind,
         recipient: a.email, templateName: kind,
+        metadataKey: "event_key", metadataValue: reminderEventKey,
+        blockingStatuses: ["pending", "sent"],
       });
       if (dup.duplicate) { skipped++; results.push({ application_id: a.id, kind, status: "skipped", reason: dup.reason }); continue; }
 
@@ -482,7 +487,7 @@ serve(async (req) => {
       try {
         renderedSubject = renderTemplate(subject, vars);
         html = buildHtml(subject, bodyT, tenant.email_signature ?? "", tenant, vars);
-        const eventKey = `${kind}:${a.id}:${a.scheduled_at}`;
+        const eventKey = reminderEventKey;
         const claim = await claimEmailEvent(admin, {
           eventKey, templateName: kind, recipient: a.email,
           tenantId: tenant.id, senderEmail: tenant.sender_email ?? tenant.smtp_username,

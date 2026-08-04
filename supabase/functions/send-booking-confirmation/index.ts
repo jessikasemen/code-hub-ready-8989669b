@@ -206,7 +206,7 @@ serve(async (req) => {
         admin.from("email_send_log")
           .select("metadata,error_message")
           .eq("template_name", REMINDER_KIND)
-          .eq("status", "sent")
+          .in("status", ["pending", "sent"])
           .in("metadata->>appointment_id", apptIds),
         admin.from("email_send_log")
           .select("metadata")
@@ -369,6 +369,9 @@ serve(async (req) => {
         recipient: app.email, templateName: REMINDER_KIND,
         metadataKey: "appointment_id", metadataValue: appt.id,
         windowHours: 2,
+        // 'pending' mitzählen: fehlt die eindeutige Sperre in der Datenbank,
+        // würde derselbe Termin sonst bei JEDEM Cron-Lauf erneut bestätigt.
+        blockingStatuses: ["pending", "sent"],
       });
       if (dup.duplicate) { skipped++; results.push({ id: appt.id, status: "skipped", reason: dup.reason }); continue; }
 

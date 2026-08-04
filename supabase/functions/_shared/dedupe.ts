@@ -27,6 +27,12 @@ export type DedupeInput = {
   /** Zusätzliche Eingrenzung über metadata->>key = value (z. B. appointment_id). */
   metadataKey?: string;
   metadataValue?: string | null;
+  /**
+   * Status, die als "läuft schon / ist schon raus" gelten. Standard: nur 'sent'.
+   * 'pending' mitzuzählen fängt den Fall ab, dass die eindeutige Sperre in der
+   * Datenbank fehlt und derselbe Vorgang bei jedem Cron-Lauf erneut startet.
+   */
+  blockingStatuses?: string[];
 };
 
 export type DedupeResult = {
@@ -68,12 +74,13 @@ export async function isDuplicateSend(admin: any, input: DedupeInput): Promise<D
 
   // 2) Feingranular über die Metadaten (z. B. genau dieser Termin).
   if (input.metadataKey && input.metadataValue) {
+    const statuses = input.blockingStatuses ?? ["sent"];
     const n = await countRows(
       admin
         .from("email_send_log")
         .select("id", { count: "exact", head: true })
         .eq("template_name", input.templateName)
-        .eq("status", "sent")
+        .in("status", statuses)
         .eq(`metadata->>${input.metadataKey}`, input.metadataValue),
     );
     if (n > 0) return { duplicate: true, reason: "already_sent" };
