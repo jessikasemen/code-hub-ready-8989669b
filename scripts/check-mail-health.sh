@@ -25,7 +25,7 @@ CONF_FILE="$REPO_DIR/scripts/backend-server.env"
 
 : "${BACKEND_USER:=root}"
 : "${BACKEND_DB_CONTAINER:=supabase-db}"
-: "${BACKEND_DB_USER:=postgres}"
+: "${BACKEND_DB_USER:=supabase_admin}"
 : "${BACKEND_DB_NAME:=postgres}"
 
 log()  { printf "\n\033[1;36m▸ %s\033[0m\n" "$*"; }
