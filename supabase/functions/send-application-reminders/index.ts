@@ -12,6 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createSmtpTransport, sendMailWithRetry } from "../_shared/smtp.ts";
 import { resolveSender, type EmailKind } from "../_shared/sender-resolver.ts";
 import { renderEmail } from "../_shared/email-wrapper.ts";
+import { pickLandingLogo, resolveEmailLogo } from "../_shared/email-logo.ts";
 import {
   MAX_PER_1H_PER_TENANT as LIMIT_1H,
   MAX_PER_12H_PER_TENANT as LIMIT_12H,
