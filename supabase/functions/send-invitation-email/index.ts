@@ -507,25 +507,23 @@ serve(async (req) => {
           },
         ]
       : [
+          // FAST-TRACK-Mails (invitation/welcome/registration): das Logo MUSS aus dem
+          // Fast-Track-Kontext kommen. Eine Vermittlungs-/Broker-Landing ist nie
+          // Kandidat — sonst steht das Logo der Vermittlung in der Zusage-Mail.
+          {
+            source: "fasttrack_landing.logo",
+            url: fastTrackLanding?.flow_type === "broker" ? null : pickLandingLogo(fastTrackLanding),
+            domain: fastTrackLanding?.domain,
+          },
           {
             source: "tenant.logo_url",
             url: tenantLogoAbsolute,
             domain: tenant.primary_domain || tenant.domain,
           },
           {
-            source: "fasttrack_landing.logo",
-            url: pickLandingLogo(fastTrackLanding),
-            domain: fastTrackLanding?.domain,
-          },
-          {
             source: "target_landing.logo",
-            url: pickLandingLogo(targetLanding),
+            url: targetLanding?.flow_type === "broker" ? null : pickLandingLogo(targetLanding),
             domain: targetLanding?.domain,
-          },
-          {
-            source: "source_landing.logo",
-            url: pickLandingLogo(sourceLanding),
-            domain: sourceLanding?.domain,
           },
         ];
     const logo = resolveEmailLogo(logoCandidates);
