@@ -206,7 +206,7 @@ serve(async (req) => {
         admin.from("email_send_log")
           .select("metadata,error_message")
           .eq("template_name", REMINDER_KIND)
-          .eq("status", "sent")
+          .in("status", ["pending", "sent"])
           .in("metadata->>appointment_id", apptIds),
         admin.from("email_send_log")
           .select("metadata")
