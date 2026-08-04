@@ -12,6 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createSmtpTransport, sendMailWithRetry } from "../_shared/smtp.ts";
 import { resolveSender, type EmailKind } from "../_shared/sender-resolver.ts";
 import { renderEmail } from "../_shared/email-wrapper.ts";
+import { pickLandingLogo, resolveEmailLogo } from "../_shared/email-logo.ts";
 import {
   MAX_PER_1H_PER_TENANT as LIMIT_1H,
   MAX_PER_12H_PER_TENANT as LIMIT_12H,
@@ -1126,7 +1127,32 @@ serve(async (req) => {
         appointment_time: scheduledDate ? formatAppointmentTime(scheduledDate) : "",
       };
       const subject = render(tmplSubject, vars);
-      const html = buildHtml(tmplSubject, tmplBody, tenant.email_signature ?? "", tenant, vars);
+      // Logo passend zur Mailseite: Registrierungs-/Fast-Track-Mails zeigen das
+      // Fast-Track-Logo, Vermittlungs-Mails das Logo der Bewerbungs-Landing.
+      // tenant.logo_url wird nur genutzt, wenn es eine absolute https-URL ist —
+      // relative Pfade würden sonst als kaputtes Bild in der Mail landen.
+      const tenantLogoAbsolute = /^https:\/\//i.test(String(tenant.logo_url ?? ""))
+        ? tenant.logo_url
+        : null;
+      const logoCandidates = isRegistration
+        ? [
+            { source: "fasttrack_landing.logo", url: pickLandingLogo(fastTrackLanding), domain: fastTrackLanding?.domain },
+            { source: "tenant.logo_url", url: tenantLogoAbsolute, domain: tenant.primary_domain || tenant.domain },
+            { source: "target_landing.logo", url: pickLandingLogo(targetLanding), domain: targetLanding?.domain },
+          ]
+        : [
+            { source: "source_landing.logo", url: pickLandingLogo(sourceLanding), domain: sourceLanding?.domain },
+            { source: "landing.logo", url: pickLandingLogo(landing), domain: landing?.domain },
+            { source: "tenant.logo_url", url: tenantLogoAbsolute, domain: tenant.primary_domain || tenant.domain },
+          ];
+      const logo = resolveEmailLogo(logoCandidates);
+      const html = buildHtml(
+        tmplSubject,
+        tmplBody,
+        tenant.email_signature ?? "",
+        { ...tenant, logo_url: logo.url },
+        vars,
+      );
 
       if (dryRun) {
         sent++;
