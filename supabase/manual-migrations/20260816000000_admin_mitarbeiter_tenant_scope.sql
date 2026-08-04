@@ -10,6 +10,15 @@ CREATE TABLE IF NOT EXISTS public.staff_tenant_access (
   UNIQUE (user_id, tenant_id)
 );
 
+-- Tabelle kann aus einem frueheren, abgebrochenen Lauf einem anderen Rollen-
+-- Owner gehoeren. Dann scheitern GRANT/ALTER mit "must be owner of table".
+DO $$
+BEGIN
+  EXECUTE 'ALTER TABLE public.staff_tenant_access OWNER TO ' || quote_ident(current_user);
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Owner von staff_tenant_access unveraendert: %', SQLERRM;
+END $$;
+
 GRANT SELECT ON public.staff_tenant_access TO authenticated;
 GRANT ALL    ON public.staff_tenant_access TO service_role;
 ALTER TABLE public.staff_tenant_access ENABLE ROW LEVEL SECURITY;
