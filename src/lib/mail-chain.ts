@@ -111,6 +111,7 @@ const STEP_KEYS: Record<MailStep["id"], string[]> = {
   ],
   zusage: [
     "invitation", "registration_invitation", "welcome_invitation",
+    "ai_acceptance_invitation", "welcome", "registration", "registration_complete",
     "bewerbung_magic_link", "reminder_invite",
   ],
 };

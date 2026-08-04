@@ -431,7 +431,7 @@ export const Route = createFileRoute("/api/public/interview-chat")({
           const { data: app, error: appErr } = await supabaseAdmin
             .from("applications")
             .select(
-              "id, full_name, first_name, last_name, email, tenant_id, status, source_slug, source_landing_id, target_landing_id, interview_messages, interview_status, interview_mode, interview_started_at, scheduled_at, is_test",
+              "id, full_name, first_name, last_name, email, tenant_id, broker_tenant_id, fasttrack_tenant_id, status, source_slug, source_landing_id, target_landing_id, interview_messages, interview_status, interview_mode, interview_started_at, scheduled_at, is_test",
             )
             .eq("id", applicationId)
             .maybeSingle();
@@ -511,9 +511,14 @@ export const Route = createFileRoute("/api/public/interview-chat")({
           let companyName = "unserem Unternehmen";
           let recruiterName = "Ihr HR-Team";
           let recruiterAvatarUrl: string | null = null;
+          // Logo der Fast-Track-Seite (nie das der Vermittlung).
+          let logoUrl: string | null = null;
+          let fasttrackTenantId: string | null = ((app as any).fasttrack_tenant_id ?? null) as
+            | string
+            | null;
           {
             const sel =
-              "id, slug, source_slug, interview_system_prompt, branding, recruiter_name, recruiter_avatar_url, linked_fasttrack_landing_id";
+              "id, slug, source_slug, tenant_id, flow_type, logo_url, interview_system_prompt, branding, recruiter_name, recruiter_avatar_url, linked_fasttrack_landing_id";
             let lp: any = null;
             if ((app as any).source_landing_id) {
               const { data: byId } = await supabaseAdmin
@@ -575,18 +580,42 @@ export const Route = createFileRoute("/api/public/interview-chat")({
               lp?.recruiter_avatar_url ||
               lp?.branding?.recruiter_avatar_url ||
               null;
+            // Logo: ausschließlich aus dem Fast-Track-Kontext. Ist die Quell-Landing
+            // eine Vermittlung (flow_type 'broker'), darf ihr Logo nicht greifen.
+            logoUrl =
+              ft?.logo_url ||
+              ft?.branding?.logo_url ||
+              (lp?.flow_type === "broker"
+                ? null
+                : lp?.logo_url || lp?.branding?.logo_url || null) ||
+              null;
+            if (!fasttrackTenantId) {
+              fasttrackTenantId = (ft?.tenant_id ??
+                (lp?.flow_type === "broker" ? null : lp?.tenant_id) ??
+                null) as string | null;
+            }
           }
           // Support-Adresse des Mandanten: dient überall als Rückfallkontakt,
           // damit niemand ohne Ansprechpartner in einer Sackgasse landet.
+          // Wichtig: immer der Fast-Track-Mandant (MuS), nie der Vermittlungs-Mandant.
           let supportEmail: string | null = null;
-          if ((app as any).tenant_id) {
-            const { data: tn } = await supabaseAdmin
-              .from("tenants")
-              .select("reply_to_email, sender_email")
-              .eq("id", (app as any).tenant_id)
-              .maybeSingle();
-            supportEmail = ((tn as any)?.reply_to_email || (tn as any)?.sender_email || null) as
-              string | null;
+          {
+            const brokerTenantId = ((app as any).broker_tenant_id ?? null) as string | null;
+            const tenantIdForSupport =
+              fasttrackTenantId ??
+              (((app as any).tenant_id ?? null) !== brokerTenantId
+                ? ((app as any).tenant_id ?? null)
+                : null);
+            if (tenantIdForSupport) {
+              const { data: tn } = await supabaseAdmin
+                .from("tenants")
+                .select("reply_to_email, sender_email, logo_url")
+                .eq("id", tenantIdForSupport)
+                .maybeSingle();
+              supportEmail = ((tn as any)?.reply_to_email || (tn as any)?.sender_email || null) as
+                string | null;
+              if (!logoUrl) logoUrl = ((tn as any)?.logo_url ?? null) as string | null;
+            }
           }
           // Branding wird an das Frontend durchgereicht, damit Chat-Kopf und
           // Begrüßungstext garantiert dieselbe Firma/Person zeigen.
@@ -595,6 +624,7 @@ export const Route = createFileRoute("/api/public/interview-chat")({
             recruiter_avatar_url: recruiterAvatarUrl,
             company_name: companyName,
             support_email: supportEmail,
+            logo_url: logoUrl,
           };
           // Vorname personalisieren — für persönliche Ansprache im Prompt.
           const rawFirst =

@@ -338,7 +338,12 @@ function AdminBewerbungenPage() {
         mailEvents,
         // Termin-Mail nur erwartet, wenn tatsächlich ein Termin existiert;
         // Zusage-Mail nur nach angenommener Bewerbung.
-        mailExpected: { termin: !!sched, zusage: phase === "angenommen" },
+        // Zusage-Mail ist ab der Zusage vorgesehen — auch danach (registriert,
+        // Onboarding, aktiv), sonst wirkt eine tatsächlich versandte Mail grau.
+        mailExpected: {
+          termin: !!sched,
+          zusage: ["angenommen", "registriert", "email_bestaetigt", "onboarding_komplett", "mitarbeiter_aktiv"].includes(phase),
+        },
         // Was das System als Nächstes verschickt — macht graue Punkte erklärbar.
         nextStep: computeNextStep({
           createdAt: a.created_at ?? null,
