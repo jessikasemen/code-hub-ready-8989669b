@@ -315,7 +315,7 @@ function AdminEmailCenterPage() {
     for (const r of rows) {
       if (r.status === "sent") s.sent++;
       else if (r.status === "dlq" || r.status === "failed" || r.status === "bounced") s.failed++;
-      else if (r.status === "pending") s.pending++;
+      else if (r.status === "pending" || r.status === "claimed") s.pending++;
       else if (r.status === "skipped") s.skipped++;
     }
     return s;
