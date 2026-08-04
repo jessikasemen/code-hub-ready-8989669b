@@ -704,8 +704,22 @@ function AdminEmailCenterPage() {
       {/* Log-Explorer */}
       <Card>
         <CardContent className="p-0">
-          <div className="px-4 py-3 border-b flex items-center gap-2">
-            <div className="text-sm font-semibold flex-1">Verlauf</div>
+          <div className="px-4 py-3 border-b flex items-center gap-2 flex-wrap">
+            <div className="text-sm font-semibold flex-1">
+              Verlauf
+              <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                {filtered.length} Einträge
+              </span>
+            </div>
+            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showTechnical}
+                onChange={e => setShowTechnical(e.target.checked)}
+                className="h-3.5 w-3.5 accent-primary"
+              />
+              Bereinigte / abgelöste Zeilen zeigen ({technicalRows.length})
+            </label>
             <select
               value={tenantFilter}
               onChange={e => setTenantFilter(e.target.value)}
