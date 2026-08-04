@@ -748,8 +748,10 @@ async function sendInviteInternal(
   const email = app.email.toLowerCase().trim();
   const registrationLink = await ensureRegistrationLink(app, request);
   if (!registrationLink) {
-    await record("failed", "token_failed");
-    return { sent: false, error: "token_failed" };
+    const base = await resolveFastTrackPortalBase(app, request);
+    const reason = base ? "token_failed" : "missing_fasttrack_portal_domain";
+    await record("failed", reason);
+    return { sent: false, error: reason };
   }
   const name = app.full_name || email;
   const firstName = app.first_name || String(name).trim().split(/\s+/)[0] || "";
