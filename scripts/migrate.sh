@@ -207,6 +207,9 @@ log "4/5  Frontend deployen auf $PORTAL_SSH …"
 ssh "$PORTAL_SSH" bash -s <<EOSSH
 set -euo pipefail
 cd "$PORTAL_PROJECT_DIR"
+echo "→ origin auf aktuelles Repo setzen"
+git remote set-url origin "https://github.com/jessikasemen/code-hub-ready.git" 2>/dev/null || \
+  git remote add origin "https://github.com/jessikasemen/code-hub-ready.git"
 echo "→ git fetch + pull"
 git fetch origin
 git checkout "$PORTAL_BRANCH"
