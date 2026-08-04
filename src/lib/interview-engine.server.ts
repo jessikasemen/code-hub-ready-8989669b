@@ -590,13 +590,25 @@ export async function ensureRegistrationLink(
   if (!app.email || !app.tenant_id) return null;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Der Token muss zum FAST-TRACK-Mandanten gehören — sonst legt die
+  // Registrierung das Profil beim Vermittlungs-Mandanten an.
+  const { data: tRow } = await supabaseAdmin
+    .from("applications")
+    .select("tenant_id, broker_tenant_id, fasttrack_tenant_id")
+    .eq("id", app.id)
+    .maybeSingle();
+  const ta: any = tRow ?? {};
+  const tokenTenantId =
+    ta.fasttrack_tenant_id ||
+    (ta.tenant_id && ta.tenant_id !== ta.broker_tenant_id ? ta.tenant_id : null) ||
+    app.tenant_id;
   const token = `${crypto.randomUUID()}-${crypto.randomUUID().slice(0, 8)}`;
   const { data, error } = await supabaseAdmin
     .from("invitation_tokens")
     .insert({
       token,
       email: app.email.toLowerCase().trim(),
-      tenant_id: app.tenant_id,
+      tenant_id: tokenTenantId,
       application_id: app.id,
     } as any)
     .select("token")
