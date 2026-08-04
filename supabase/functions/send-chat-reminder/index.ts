@@ -15,6 +15,7 @@ import { createSmtpTransport, sendMailWithRetry } from "../_shared/smtp.ts";
 import { loadTenantForSend } from "../_shared/sender-resolver.ts";
 import { guardSend } from "../_shared/send-guard.ts";
 import { logMailAbort } from "../_shared/log-abort.ts";
+import { claimEmailEvent, finishEmailClaim, retryFailedEmailClaim, type EmailClaim } from "../_shared/send-claim.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -185,6 +186,40 @@ serve(async (req) => {
       return json({ success: true, skipped: true, reason: allowance.reason }, 200);
     }
 
+    // 🔒 Atomare Reservierung: max. eine Chat-Erinnerung pro Empfänger und Tag.
+    // Zwei gleichzeitige Klicks können die 24h-Prüfung oben überholen — der
+    // eindeutige event_key in der Datenbank kann das nicht.
+    const dayBucket = new Date().toISOString().slice(0, 10);
+    const eventKey = `chat_reminder:${userId}:${dayBucket}`;
+    let claim: EmailClaim | null = await claimEmailEvent(admin, {
+      eventKey,
+      templateName: "chat_reminder",
+      recipient: to,
+      tenantId: tenant.id,
+      senderEmail,
+      subject,
+      html,
+      metadata: {
+        user_id: userId, unread_count: unreadCount, tenant_id: tenant.id,
+        sender_kind: "fasttrack_chat_reminder", resolved_tenant_id: tenant.id,
+        source: "send-chat-reminder",
+      },
+    });
+    if (!claim) {
+      // Ein vorheriger Versuch heute ist fehlgeschlagen? Dann darf erneut
+      // gesendet werden — eine erfolgreiche Mail wird dagegen nie wiederholt.
+      claim = await retryFailedEmailClaim(admin, {
+        eventKey,
+        metadata: { user_id: userId, tenant_id: tenant.id, source: "send-chat-reminder", retry: true },
+      });
+    }
+    if (!claim) {
+      return json({
+        error: "Für heute wurde bereits eine Erinnerung an diese Adresse gesendet.",
+        skipped: true,
+      }, 200);
+    }
+
     try {
       const info = await transporter.sendMail({
         from: `"${senderName}" <${senderEmail}>`,
@@ -193,29 +228,24 @@ serve(async (req) => {
         subject,
         html,
       });
-      await admin.from("email_send_log").insert({
-        tenant_id: tenant.id,
-        template_name: "chat_reminder",
-        recipient_email: to,
+      await finishEmailClaim(admin, claim, {
         status: "sent",
-        rendered_subject: subject,
-        rendered_html: html,
-        sender_email: senderEmail,
-        metadata: { message_id: info?.messageId ?? null, unread_count: unreadCount, user_id: userId, tenant_id: tenant.id, sender_kind: "fasttrack_chat_reminder", resolved_tenant_id: tenant.id },
+        metadata: {
+          message_id: info?.messageId ?? null, unread_count: unreadCount, user_id: userId,
+          tenant_id: tenant.id, sender_kind: "fasttrack_chat_reminder", resolved_tenant_id: tenant.id,
+          source: "send-chat-reminder",
+        },
       });
       return json({ success: true, unread: unreadCount }, 200);
 
     } catch (sendErr: any) {
       const reason = String(sendErr?.message ?? sendErr);
-      await admin.from("email_send_log").insert({
-        tenant_id: tenant.id,
-        template_name: "chat_reminder",
-        recipient_email: to,
+      // Fehlgeschlagen → als Fehler protokollieren (bleibt im Mail-Center
+      // sichtbar); ein erneuter Klick darf denselben Schlüssel wiederverwenden.
+      await finishEmailClaim(admin, claim, {
         status: "failed",
-        error_message: reason,
-        rendered_subject: subject,
-        rendered_html: html,
-        sender_email: senderEmail,
+        error: reason,
+        metadata: { user_id: userId, tenant_id: tenant.id, source: "send-chat-reminder" },
       });
       return json({ error: `Versand fehlgeschlagen: ${reason}` }, 502);
     }
