@@ -15,6 +15,7 @@ import { createSmtpTransport, sendMailWithRetry } from "../_shared/smtp.ts";
 import { loadTenantForSend } from "../_shared/sender-resolver.ts";
 import { guardSend } from "../_shared/send-guard.ts";
 import { logMailAbort } from "../_shared/log-abort.ts";
+import { claimEmailEvent, finishEmailClaim, releaseEmailClaim, type EmailClaim } from "../_shared/send-claim.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
