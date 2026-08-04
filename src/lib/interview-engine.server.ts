@@ -468,32 +468,81 @@ export async function sendRegistrationInviteAfterAiAccept(
 }
 
 /**
- * Portal-Basis-URL für eine Bewerbung auflösen:
- * Fast-Track-Zielseite → Tenant-Domain → Request-Origin.
+ * Portal-Basis-URL für eine Bewerbung auflösen — STRIKT aus dem Fast-Track-Kontext.
+ *
+ * Reihenfolge:
+ *   1. verknüpfte Fast-Track-Landing (linked_fasttrack_landing_id der Quell-Landing
+ *      bzw. target_landing_id), niemals eine Broker-/Vermittlungs-Landing
+ *   2. applications.fasttrack_tenant_id → primary_domain/domain
+ *   3. applications.tenant_id, aber NUR wenn dieser nicht der Vermittlungs-Mandant ist
+ *
+ * Ergibt sich keine Fast-Track-Domain, wird bewusst `null` zurückgegeben — ein
+ * Registrierungs-Link auf der Vermittlungs-Domain (z. B. portal.w3-personal.de)
+ * ist immer falsch, weil Token und Mandant dort nicht zusammenpassen.
  */
-export async function resolvePortalBase(app: ApplicationRow, request: Request): Promise<string> {
+export async function resolveFastTrackPortalBase(
+  app: ApplicationRow,
+  _request?: Request,
+): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  let portalDomain: string | null = null;
-  const targetLandingId = (app as any).target_landing_id ?? null;
-  if (targetLandingId) {
-    const { data: lp } = await supabaseAdmin
+
+  const { data: row } = await supabaseAdmin
+    .from("applications")
+    .select("tenant_id, broker_tenant_id, fasttrack_tenant_id, source_landing_id, target_landing_id")
+    .eq("id", app.id)
+    .maybeSingle();
+  const a: any = row ?? app;
+
+  const loadLanding = async (id: string | null | undefined) => {
+    if (!id) return null;
+    const { data } = await supabaseAdmin
       .from("landing_pages")
-      .select("domain")
-      .eq("id", targetLandingId)
+      .select("id, domain, flow_type, linked_fasttrack_landing_id")
+      .eq("id", id)
       .maybeSingle();
-    portalDomain = (lp as any)?.domain ?? null;
-  }
-  if (!portalDomain && app.tenant_id) {
-    const { data: tenant } = await supabaseAdmin
+    return (data as any) ?? null;
+  };
+  const notBroker = (lp: any) => (lp && lp.flow_type !== "broker" ? lp : null);
+
+  let portalDomain: string | null = null;
+
+  // 1) Fast-Track-Landing
+  const sourceLanding = await loadLanding(a.source_landing_id);
+  const linkedId = sourceLanding?.linked_fasttrack_landing_id ?? null;
+  const fastTrackLanding =
+    notBroker(await loadLanding(linkedId)) || notBroker(await loadLanding(a.target_landing_id));
+  portalDomain = (fastTrackLanding?.domain as string | null) || null;
+
+  // 2) Fast-Track-Mandant
+  const tenantDomain = async (tenantId: string | null | undefined) => {
+    if (!tenantId) return null;
+    const { data } = await supabaseAdmin
       .from("tenants")
       .select("domain, primary_domain")
-      .eq("id", app.tenant_id)
+      .eq("id", tenantId)
       .maybeSingle();
-    portalDomain = (tenant as any)?.primary_domain || (tenant as any)?.domain || null;
+    return ((data as any)?.primary_domain || (data as any)?.domain || null) as string | null;
+  };
+  if (!portalDomain) portalDomain = await tenantDomain(a.fasttrack_tenant_id);
+
+  // 3) applications.tenant_id nur, wenn das nicht der Vermittlungs-Mandant ist
+  if (!portalDomain && a.tenant_id && a.tenant_id !== a.broker_tenant_id) {
+    portalDomain = await tenantDomain(a.tenant_id);
   }
-  const fallbackOrigin = new URL(request.url).origin.replace(/\/+$/, "");
-  return portalDomain ? `https://portal.${portalDomain}` : fallbackOrigin;
+
+  const clean = String(portalDomain ?? "")
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "");
+  if (!clean) {
+    console.warn("[interview-engine] missing_fasttrack_portal_domain", { applicationId: app.id });
+    return null;
+  }
+  return clean.startsWith("portal.") ? `https://${clean}` : `https://portal.${clean}`;
 }
+
+/** @deprecated Nutze resolveFastTrackPortalBase — liefert niemals eine Broker-Domain. */
+export const resolvePortalBase = resolveFastTrackPortalBase;
 
 /** Registrierungs-Link aus einem vorhandenen Token bauen (identisch zur Mail). */
 export function buildRegistrationLink(base: string, token: string, applicationId: string): string {
@@ -517,7 +566,8 @@ export async function getExistingRegistrationLink(
     .limit(1);
   const token = (data as any[] | null)?.[0]?.token;
   if (!token) return null;
-  const base = await resolvePortalBase(app, request);
+  const base = await resolveFastTrackPortalBase(app, request);
+  if (!base) return null;
   return buildRegistrationLink(base, String(token), app.id);
 }
 
@@ -526,8 +576,17 @@ export async function ensureRegistrationLink(
   app: ApplicationRow,
   request: Request,
 ): Promise<string | null> {
-  const existing = await getExistingRegistrationLink(app, request);
-  if (existing) return existing;
+  const base = await resolveFastTrackPortalBase(app, request);
+  if (!base) return null;
+  const { supabaseAdmin: adminForLookup } = await import("@/integrations/supabase/client.server");
+  const { data: existingToken } = await adminForLookup
+    .from("invitation_tokens")
+    .select("token, created_at")
+    .eq("application_id", app.id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const found = (existingToken as any[] | null)?.[0]?.token;
+  if (found) return buildRegistrationLink(base, String(found), app.id);
   if (!app.email || !app.tenant_id) return null;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -546,7 +605,6 @@ export async function ensureRegistrationLink(
     console.error("[interview-engine] replacement invitation token error:", error);
     return null;
   }
-  const base = await resolvePortalBase(app, request);
   return buildRegistrationLink(base, String(data.token), app.id);
 }
 
