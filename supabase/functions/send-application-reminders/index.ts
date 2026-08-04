@@ -1040,11 +1040,13 @@ serve(async (req) => {
           results.push({ app: app.id, kind, status: "skipped", reason: "no_invite_token" });
           continue;
         }
-        const activeDomain = tenant.primary_domain || tenant.domain;
-        const registrationHost = portalHost(activeDomain);
+        // Registrierungs-Link IMMER auf die Fast-Track-Portal-Domain, niemals auf
+        // die Vermittlungs-Domain (Token/Mandant passen dort nicht zusammen).
+        const registrationHost =
+          fastTrackHost || portalHost(tenant.primary_domain || tenant.domain);
         if (!registrationHost) {
           skipped++;
-          results.push({ app: app.id, kind, status: "skipped", reason: "no_tenant_domain" });
+          results.push({ app: app.id, kind, status: "skipped", reason: "no_fasttrack_domain" });
           continue;
         }
         portalLink = `https://${registrationHost}/register?token=${encodeURIComponent(inviteToken)}&ref=${encodeURIComponent(app.id)}`;
