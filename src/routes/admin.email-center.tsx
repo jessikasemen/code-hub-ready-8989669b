@@ -52,10 +52,13 @@ const ACTIVE_TEMPLATES: { key: string; keys?: string[]; label: string; group: st
 type Row = EmailLog & { tenant_id?: string | null };
 
 function AdminEmailCenterPage() {
-  const [rows, setRows] = useState<Row[]>([]);
+  /** ALLE Zeilen des Zeitraums — inklusive technischer (superseded/duplicate). */
+  const [allRows, setAllRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<"24h" | "7d" | "30d">("7d");
   const [q, setQ] = useState("");
+  /** Technische Zeilen (abgelöste Retries, bereinigte Doppelungen) in der Liste zeigen. */
+  const [showTechnical, setShowTechnical] = useState(false);
   /** Filter auf einen Tenant (Absender-Mandant) — "" = alle. */
   const [tenantFilter, setTenantFilter] = useState("");
   const [confirmResend, setConfirmResend] = useState<Row | null>(null);
@@ -88,7 +91,9 @@ function AdminEmailCenterPage() {
         .not("status", "in", `(${HIDDEN_STATUS.join(",")})`),
       supabase.from("tenants").select("id,name,emails_paused,emails_paused_by,emails_paused_reason,smtp_host,smtp_username,smtp_password,sender_email"),
     ]);
-    setRows(((data as Row[] | null) ?? []).filter(r => !HIDDEN_STATUS.includes(r.status)));
+    // Technische Zeilen bleiben geladen: nur so ist eine Mail-Flut sichtbar,
+    // die nachträglich als Doppelversand bereinigt wurde.
+    setAllRows((data as Row[] | null) ?? []);
     setExactTotal(count ?? null);
     setTenantNames(Object.fromEntries(((tenants as { id: string; name: string }[] | null) ?? []).map(t => [t.id, t.name])));
 
@@ -99,6 +104,53 @@ function AdminEmailCenterPage() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [range]);
 
+  /** Fachlich zählende Zeilen (ohne abgelöste Retries / bereinigte Doppelungen). */
+  const rows = useMemo(() => allRows.filter(r => !HIDDEN_EMAIL_STATUS.includes(r.status)), [allRows]);
+  /** Technische Zeilen — belegen, dass eine Mail tatsächlich mehrfach im Log landete. */
+  const technicalRows = useMemo(() => allRows.filter(r => HIDDEN_EMAIL_STATUS.includes(r.status)), [allRows]);
+
+  const rangeLabel = range === "24h" ? "24 Stunden" : range === "7d" ? "7 Tagen" : "30 Tagen";
+
+  /**
+   * Empfänger-Volumen über den gewählten Zeitraum, inklusive der technischen
+   * Zeilen. Damit fällt eine Mail-Flut an eine einzelne Adresse sofort auf,
+   * auch wenn die Doppelungen später bereinigt wurden.
+   */
+  const recipientVolume = useMemo(() => {
+    type V = {
+      recipient: string; total: number; sent: number; failed: number; pending: number;
+      cleaned: number; templates: Map<string, number>; last: string;
+    };
+    const m = new Map<string, V>();
+    for (const r of allRows) {
+      const key = (r.recipient_email ?? "").toLowerCase();
+      if (!key) continue;
+      const v = m.get(key) ?? {
+        recipient: key, total: 0, sent: 0, failed: 0, pending: 0, cleaned: 0,
+        templates: new Map<string, number>(), last: r.created_at,
+      };
+      v.total++;
+      if (HIDDEN_EMAIL_STATUS.includes(r.status)) v.cleaned++;
+      else if (r.status === "sent") v.sent++;
+      else if (["failed", "dlq", "bounced"].includes(r.status)) v.failed++;
+      else if (["pending", "claimed"].includes(r.status)) v.pending++;
+      v.templates.set(r.template_name, (v.templates.get(r.template_name) ?? 0) + 1);
+      if (r.created_at > v.last) v.last = r.created_at;
+      m.set(key, v);
+    }
+    return [...m.values()]
+      .map(v => ({
+        ...v,
+        breakdown: [...v.templates.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([t, n]) => `${EMAIL_TYPE_LABELS[t] ?? t} ×${n}`),
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [allRows]);
+
+  /** Adressen mit auffällig vielen Mails im Zeitraum (Flut-Warnung). */
+  const floodRecipients = useMemo(() => recipientVolume.filter(v => v.total >= 5), [recipientVolume]);
+
   /**
    * Doppelversand-Wächter: gleiche Vorlage + gleicher Empfänger + GLEICHER
    * Vorgang (application_id) mehrfach innerhalb von 24 h erfolgreich versendet.
@@ -106,24 +158,26 @@ function AdminEmailCenterPage() {
    * dann sind zwei Mails derselben Vorlage korrekt und kein Fehler.
    */
   const duplicates = useMemo(() => {
-    const since = Date.now() - 24 * 3600_000;
     type Grp = {
       template: string; recipient: string; count: number; last: string;
-      vorgaenge: Set<string>; manual: number; sources: Set<string>;
+      vorgaenge: Set<string>; manual: number; sources: Set<string>; cleaned: number;
     };
     const groups = new Map<string, Grp>();
-    for (const r of rows) {
-      if (r.status !== "sent") continue;
-      if (new Date(r.created_at).getTime() < since) continue;
+    // Bereinigte/abgelöste Zeilen zählen mit: sie sind der Beleg dafür, dass
+    // dieselbe Mail mehrfach ausgelöst wurde.
+    for (const r of allRows) {
+      const isCleaned = HIDDEN_EMAIL_STATUS.includes(r.status);
+      if (r.status !== "sent" && !isCleaned) continue;
       const meta = (r.metadata ?? {}) as Record<string, unknown>;
       const vorgang = String(meta.application_id ?? meta.appointment_id ?? "");
       const manual = meta.trigger === "manual" || meta.manual_send === true;
       const key = `${r.template_name ?? "?"}|${(r.recipient_email ?? "").toLowerCase()}`;
       const g = groups.get(key) ?? {
         template: r.template_name ?? "?", recipient: r.recipient_email ?? "",
-        count: 0, last: r.created_at, vorgaenge: new Set<string>(), manual: 0, sources: new Set<string>(),
+        count: 0, last: r.created_at, vorgaenge: new Set<string>(), manual: 0, sources: new Set<string>(), cleaned: 0,
       };
       g.count++;
+      if (isCleaned) g.cleaned++;
       if (r.created_at > g.last) g.last = r.created_at;
       if (vorgang) g.vorgaenge.add(vorgang);
       if (manual) g.manual++;
@@ -139,7 +193,7 @@ function AdminEmailCenterPage() {
         return { ...g, kind, vorgangCount: g.vorgaenge.size, source: [...g.sources].join(", ") };
       })
       .sort((a, b) => (a.kind === b.kind ? b.count - a.count : a.kind === "real" ? -1 : b.kind === "real" ? 1 : a.kind === "manual" ? -1 : 1));
-  }, [rows]);
+  }, [allRows]);
 
   /** Echte Doppelungen — nur die sind ein Fehler im System. */
   const realDuplicates = useMemo(() => duplicates.filter(d => d.kind === "real"), [duplicates]);
