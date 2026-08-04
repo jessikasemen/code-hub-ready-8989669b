@@ -18,7 +18,9 @@ interface Props {
 
 export default function StepAccount({ firstName, lastName, email, password, setFirstName, setLastName, setEmail, setPassword, onNext, loading }: Props) {
   const { tenant } = useTenant();
-  const supportEmail = tenant?.company_email || tenant?.sender_email || "support@cac-vermittlung.de";
+  // Nur die Adresse des tatsächlichen Mandanten (Fast-Track) zeigen — niemals
+  // eine fest verdrahtete Fremdadresse, die zur falschen Firma führt.
+  const supportEmail = tenant?.company_email || tenant?.sender_email || null;
   return (
     <div className="space-y-5">
       <div className="text-center mb-6">
@@ -50,19 +52,21 @@ export default function StepAccount({ firstName, lastName, email, password, setF
         {loading ? "Wird erstellt…" : "Weiter"}
         {!loading && <ArrowRight className="h-4 w-4" />}
       </Button>
-      <div className="pt-2 flex flex-col items-center gap-2 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <LifeBuoy className="h-3.5 w-3.5" />
-          <span>Benötigen Sie Hilfe? Bei Problemen einfach melden:</span>
+      {supportEmail && (
+        <div className="pt-2 flex flex-col items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <LifeBuoy className="h-3.5 w-3.5" />
+            <span>Benötigen Sie Hilfe? Bei Problemen einfach melden:</span>
+          </div>
+          <a
+            href={`mailto:${supportEmail}?subject=${encodeURIComponent("Hilfe bei der Registrierung")}`}
+            className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
+          >
+            <Mail className="h-3.5 w-3.5" />
+            {supportEmail}
+          </a>
         </div>
-        <a
-          href={`mailto:${supportEmail}?subject=${encodeURIComponent("Hilfe bei der Registrierung")}`}
-          className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
-        >
-          <Mail className="h-3.5 w-3.5" />
-          {supportEmail}
-        </a>
-      </div>
+      )}
       <p className="text-center">
         <a href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Bereits ein Konto? → Anmelden</a>
       </p>

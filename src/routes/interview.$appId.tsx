@@ -99,6 +99,7 @@ function InterviewPage() {
     recruiter_avatar_url?: string | null;
     company_name?: string;
     support_email?: string | null;
+    logo_url?: string | null;
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const zusageRef = useRef<HTMLDivElement>(null);
@@ -118,9 +119,11 @@ function InterviewPage() {
       "logo_url, branding, recruiter_name, recruiter_avatar_url, flow_type, linked_fasttrack_landing_id";
     const apply = (row: any) => {
       if (cancelled || !row) return;
+      // Logo der Vermittlung (Broker) darf im Fast-Track-Gespräch nie erscheinen.
+      const isBroker = row.flow_type === "broker";
       setBranding({
         ...(row.branding as any),
-        logo_url: row.logo_url,
+        logo_url: isBroker ? null : row.logo_url,
         recruiter_name: row.recruiter_name || undefined,
         recruiter_avatar_url: row.recruiter_avatar_url || null,
       });
@@ -369,6 +372,8 @@ function InterviewPage() {
   const recruiterDisplayName =
     serverBranding?.recruiter_name || branding?.recruiter_name || "Ihr HR-Team";
   const primary = branding?.primary_color || "#2563eb";
+  // Server-Logo (Fast-Track-Auflösung) hat Vorrang vor der direkten Abfrage.
+  const logoUrl = serverBranding?.logo_url || branding?.logo_url || null;
   const portalBase =
     (portal || "").replace(/\/+$/, "") ||
     (typeof window !== "undefined" ? window.location.origin : "");
@@ -380,8 +385,8 @@ function InterviewPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 p-4">
         <div className="max-w-lg w-full bg-white dark:bg-slate-900 rounded-2xl border border-border p-6 space-y-4 shadow-sm">
-          {branding?.logo_url && (
-            <img src={branding.logo_url} alt={company} className="h-10 object-contain" />
+          {logoUrl && (
+            <img src={logoUrl} alt={company} className="h-10 object-contain" />
           )}
           <h1 className="text-xl font-semibold">Bewerbungsgespräch mit {company}</h1>
           <div className="text-sm text-muted-foreground space-y-2">
@@ -415,7 +420,7 @@ function InterviewPage() {
         scheduledAt={scheduledAt}
         company={company}
         primary={primary}
-        logoUrl={branding?.logo_url || null}
+        logoUrl={logoUrl}
         recruiterName={recruiterDisplayName}
       />
     );
