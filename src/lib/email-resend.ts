@@ -19,7 +19,6 @@ export async function resendEmailLog(
   try {
     const { data, error } = await supabase.functions.invoke("email-resend", {
       body: { log_id: logId, to: opts.to, is_test: opts.isTest, force: opts.force },
-      // @ts-expect-error signal wird von supabase-js durchgereicht
       signal: controller.signal,
     });
     if (error) {
