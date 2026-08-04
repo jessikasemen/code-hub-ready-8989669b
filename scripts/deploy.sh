@@ -41,7 +41,9 @@ TARGET_DB_URL="${TARGET_DB_URL:-}"
 #   MIGRATE_SSH_HOST=root@<backend-ip>   (Voraussetzung: SSH-Key vorhanden)
 MIGRATE_SSH_HOST="${MIGRATE_SSH_HOST:-}"
 MIGRATE_DB_CONTAINER="${MIGRATE_DB_CONTAINER:-supabase-db}"
-MIGRATE_DB_USER="${MIGRATE_DB_USER:-postgres}"
+# supabase_admin ist der Eigentümer der Tabellen/Funktionen im self-hosted
+# Supabase. Mit "postgres" scheitern Migrationen an "must be owner of ...".
+MIGRATE_DB_USER="${MIGRATE_DB_USER:-supabase_admin}"
 MIGRATE_DB_NAME="${MIGRATE_DB_NAME:-postgres}"
 
 log() { printf "\n\033[1;36m▸ %s\033[0m\n" "$*"; }
