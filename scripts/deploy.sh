@@ -28,7 +28,7 @@ if [ -z "${ENV_FILE:-}" ]; then
   fi
 fi
 REPO_BRANCH="${REPO_BRANCH:-main}"
-REPO_URL="${REPO_URL:-https://github.com/jessikasemen/code-hub-ready.git}"
+REPO_URL="${REPO_URL:-https://github.com/jessikasemen/code-hub-ready-8989669b.git}"
 SERVICE_NAME="${SERVICE_NAME:-portal.service}"
 PORT="${PORT:-3000}"
 HOST="${HOST:-127.0.0.1}"
