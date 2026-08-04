@@ -79,6 +79,24 @@ BEGIN
       RAISE NOTICE 'konnte % (jobid %) nicht entfernen: %', r.jobname, r.jobid, SQLERRM;
     END;
   END LOOP;
+
+  -- Generisch: JEDEN mehrfach registrierten Job entdoppeln (aeltester bleibt).
+  -- Ohne das laufen z. B. auto_complete_appointments / smtp-health-cron doppelt
+  -- und jeder Lauf kann eine zweite Mail ausloesen.
+  FOR r IN
+    SELECT jobid, jobname FROM (
+      SELECT jobid, jobname,
+             row_number() OVER (PARTITION BY jobname ORDER BY jobid) AS rn
+        FROM cron.job
+    ) d WHERE rn > 1
+  LOOP
+    BEGIN
+      PERFORM cron.unschedule(r.jobid);
+      RAISE NOTICE 'Duplikat entfernt: % (jobid %)', r.jobname, r.jobid;
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'konnte Duplikat % (jobid %) nicht entfernen: %', r.jobname, r.jobid, SQLERRM;
+    END;
+  END LOOP;
 END\$\$;"
 
 # --- 2) Jobs sauber neu anlegen ---------------------------------------------
