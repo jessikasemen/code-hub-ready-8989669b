@@ -465,6 +465,10 @@ serve(async (req) => {
       const dup = forced ? { duplicate: false, reason: "" } : await isDuplicateSend(admin, {
         applicationId: a.id, kind,
         recipient: a.email, templateName: kind,
+        // Terminbezogen sperren: nach einer Umbuchung ist die Erinnerung für den
+        // NEUEN Termin fällig, für denselben Termin aber nur genau einmal.
+        metadataKey: "scheduled_at", metadataValue: a.scheduled_at ?? null,
+        blockingStatuses: ["pending", "sent"],
       });
       if (dup.duplicate) { skipped++; results.push({ application_id: a.id, kind, status: "skipped", reason: dup.reason }); continue; }
 
