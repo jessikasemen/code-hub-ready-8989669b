@@ -423,13 +423,53 @@ function AdminEmailCenterPage() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Kpi label="Gesamt" value={exactTotal ?? stats.total} icon={Mail} tone="muted" />
         <Kpi label="Versendet" value={stats.sent} icon={CheckCircle2} tone="emerald" />
         <Kpi label="Ausstehend" value={stats.pending} icon={Clock} tone="amber" />
         <Kpi label="Übersprungen" value={stats.skipped} icon={Clock} tone="muted" />
         <Kpi label="Fehlgeschlagen" value={stats.failed} icon={XCircle} tone="rose" />
+        <Kpi label="Bereinigt / abgelöst" value={technicalRows.length} icon={RotateCcw} tone="muted" />
       </div>
+
+      {/* Mail-Flut pro Empfänger — auch bereinigte Doppelungen sind hier sichtbar */}
+      {floodRecipients.length > 0 && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardContent className="p-4">
+            <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              Empfänger mit auffällig vielen Mails ({floodRecipients.length})
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              Alle Adressen mit 5 oder mehr Log-Einträgen in den letzten {rangeLabel} — inklusive
+              nachträglich bereinigter Doppelungen. Klick filtert die Liste unten auf die Adresse.
+            </div>
+            <div className="mt-3 space-y-2">
+              {floodRecipients.slice(0, 10).map(v => (
+                <button
+                  key={v.recipient}
+                  type="button"
+                  onClick={() => { setQ(v.recipient); setShowTechnical(true); }}
+                  className="w-full text-left text-xs hover:bg-muted/40 rounded-md px-1 py-0.5"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex-1 truncate font-medium">{v.recipient}</span>
+                    <span className="text-emerald-600 tabular-nums">✓ {v.sent}</span>
+                    <span className="text-amber-600 tabular-nums">⏳ {v.pending}</span>
+                    <span className="text-rose-600 tabular-nums">✗ {v.failed}</span>
+                    <span className="text-muted-foreground tabular-nums">⤼ {v.cleaned} bereinigt</span>
+                    <span className="tabular-nums font-semibold">Σ {v.total}</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground truncate">
+                    {v.breakdown.slice(0, 4).join(" · ")}
+                    {v.breakdown.length > 4 && " …"}
+                    {" · zuletzt "}{relativeTime(v.last)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
 
       {/* Versand-Blocker: nur schmaler Hinweis — Details stehen auf dem Dashboard */}
@@ -439,12 +479,13 @@ function AdminEmailCenterPage() {
         <Card className={realDuplicates.length > 0 ? "border-rose-500/50 bg-rose-500/5" : "border-amber-500/50 bg-amber-500/5"}>
           <CardContent className="p-4">
             <div className={`text-sm font-semibold ${realDuplicates.length > 0 ? "text-rose-700 dark:text-rose-400" : "text-amber-700 dark:text-amber-400"}`}>
-              Mehrfachversand in den letzten 24 Stunden ({duplicates.length}) ·{" "}
+              Mehrfachversand in den letzten {rangeLabel} ({duplicates.length}) ·{" "}
               {realDuplicates.length > 0 ? `${realDuplicates.length} echte Doppelung` : "keine echte Doppelung"}
             </div>
             <div className="text-[11px] text-muted-foreground mt-0.5">
               „Verschiedene Vorgänge“ ist normal: dieselbe Person hat zwei Bewerbungen oder Termine.
-              Nur „Echte Doppelung“ ist ein Fehler. Vollständige Analyse mit{" "}
+              Nur „Echte Doppelung“ ist ein Fehler. Bereits bereinigte Doppelungen zählen mit.
+              Vollständige Analyse mit{" "}
               <code>scripts/diagnose-duplicates.sh</code>.
             </div>
             <div className="mt-3 space-y-1">
@@ -462,6 +503,9 @@ function AdminEmailCenterPage() {
                     </span>
                     <span className={`truncate max-w-[12rem] ${badge.cls}`}>{badge.text}</span>
                     <span className="tabular-nums font-semibold">×{d.count}</span>
+                    {d.cleaned > 0 && (
+                      <span className="text-[11px] text-muted-foreground">({d.cleaned} bereinigt)</span>
+                    )}
                   </div>
                 );
               })}
@@ -481,7 +525,8 @@ function AdminEmailCenterPage() {
               Warum Mails nicht ankamen ({failureCauses.reduce((n, f) => n + f.count, 0)})
             </div>
             <div className="text-[11px] text-muted-foreground mt-0.5">
-              Fehlversuche im gewählten Zeitraum, nach Ursache gruppiert — mit dem nötigen nächsten Schritt.
+              Fehlversuche der letzten {rangeLabel}, nach Ursache gruppiert — mit dem nötigen nächsten
+              Schritt. Für „nur aktuelle Fehler“ oben auf 24 h umstellen.
             </div>
             <div className="mt-3 space-y-2">
               {failureCauses.slice(0, 8).map(f => (
