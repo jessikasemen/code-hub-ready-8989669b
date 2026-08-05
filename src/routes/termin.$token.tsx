@@ -14,6 +14,7 @@ import {
   cancelAppointment,
 } from "@/lib/appointments.functions";
 import { useToast } from "@/hooks/use-toast";
+import ApplicantLiveChat from "@/components/ApplicantLiveChat";
 
 export const Route = createFileRoute("/termin/$token")({
   head: () => ({
@@ -109,6 +110,7 @@ function CancelPage() {
             </CardContent>
           </Card>
         </div>
+        <ApplicantLiveChat token={cancelledMagicToken || a.magic_token || null} />
       </div>
     );
   }
@@ -220,6 +222,7 @@ function CancelPage() {
         </Dialog>
 
       </div>
+      <ApplicantLiveChat token={a.magic_token ?? null} />
     </div>
   );
 }
