@@ -88,7 +88,6 @@ const STAFF_ALLOWED_PREFIXES = [
   "/admin/tasks",
   "/admin/assignments",
   "/admin/chat",
-  "/admin/bewerber-chat",
 ];
 const STAFF_HOME = "/admin/tasks";
 const staffNavGroups: NavGroup[] = navGroups

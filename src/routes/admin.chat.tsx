@@ -108,6 +108,18 @@ function AdminChatPage() {
   }, [user]);
 
   const loadConversations = async () => {
+    // Admin-Mitarbeiter: nur die zugewiesenen Marken/Tenants sichtbar machen.
+    let allowedTenantIds: Set<string> | null = null;
+    if (isStaff) {
+      const { data: accessRows } = await (supabase as any)
+        .from("staff_tenant_access")
+        .select("tenant_id")
+        .eq("user_id", user!.id);
+      const ids = ((accessRows ?? []) as any[]).map((r) => r.tenant_id as string);
+      // Ohne Zuweisung bleibt es wie bisher (alle Marken).
+      if (ids.length > 0) allowedTenantIds = new Set(ids);
+    }
+
     const [profilesRes, convsRes, msgsRes, tenantsRes, rolesRes] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, tenant_id, team_leader_id"),
       supabase.from("chat_conversations").select("user_id, status, escalated_at, admin_hidden_at, admin_unread, admin_note"),
@@ -120,7 +132,10 @@ function AdminChatPage() {
       supabase.from("user_roles").select("user_id, role"),
     ]);
 
-    const profiles = profilesRes.data ?? [];
+    const allProfiles = profilesRes.data ?? [];
+    const profiles = allowedTenantIds
+      ? (allProfiles as any[]).filter((p) => p.tenant_id && allowedTenantIds!.has(p.tenant_id))
+      : allProfiles;
     if (!profiles.length) { setLoading(false); return; }
     const adminIds = new Set<string>(
       ((rolesRes.data ?? []) as any[])
@@ -130,9 +145,13 @@ function AdminChatPage() {
     adminIds.add(user!.id);
     adminIdsRef.current = adminIds;
     leaderMapRef.current = new Map(
-      (profiles as any[]).map((p) => [p.user_id as string, (p.team_leader_id as string | null) ?? null])
+      (allProfiles as any[]).map((p) => [p.user_id as string, (p.team_leader_id as string | null) ?? null])
     );
-    const tenantMap = new Map<string, string>(((tenantsRes.data ?? []) as any[]).map((t) => [t.id, t.name]));
+    const tenantMap = new Map<string, string>(
+      ((tenantsRes.data ?? []) as any[])
+        .filter((t) => !allowedTenantIds || allowedTenantIds.has(t.id))
+        .map((t) => [t.id, t.name]),
+    );
     const profileMap = new Map(profiles.map((p: any) => [p.user_id, { name: p.full_name as string, tenant_id: p.tenant_id as string | null }]));
     const convMap = new Map<string, any>((convsRes.data ?? []).map((c: any) => [c.user_id, c]));
 
