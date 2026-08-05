@@ -229,6 +229,57 @@
       .catch(function(){sub.textContent='';showError('Netzwerkfehler beim Laden des Kalenders.');});
   }
 
+  // ── Inline-Calendly (Vermittlung / Partner) ─────────────────────────────
+  // Der Bewerber ist in dieser Sekunde motiviert: Terminwahl daher direkt auf
+  // der Landing-Page einbetten statt Modal + neuer Tab. Die Mail ist nur noch
+  // die Erinnerung, nicht der Weg zum Termin.
+  function renderCalendlyInline(container, url, broker, emailStatus){
+    container.innerHTML='';
+    container.style.cssText='margin-top:18px;padding:22px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 8px 30px -12px rgba(15,23,42,.15);color:#0f172a;font-family:inherit;';
+
+    var head=document.createElement('div');head.style.cssText='text-align:center;margin-bottom:14px;';
+    if(broker&&broker.partner_logo){
+      var lg=document.createElement('img');lg.src=broker.partner_logo;lg.alt=broker.partner_name||'';
+      lg.style.cssText='max-height:34px;margin:0 auto 10px;display:block;';head.appendChild(lg);
+    }
+    var h=document.createElement('h3');h.style.cssText='margin:0 0 6px;font-size:20px;font-weight:700;';
+    h.textContent=(broker&&broker.intro_headline)||'Wunschtermin wählen';
+    var sub=document.createElement('p');sub.style.cssText='margin:0;color:#475569;font-size:14px;line-height:1.5;';
+    sub.textContent=(broker&&broker.intro_subline)||'Ihre Bewerbung ist eingegangen. Wählen Sie jetzt direkt hier Ihren Gesprächstermin.';
+    head.appendChild(h);head.appendChild(sub);container.appendChild(head);
+
+    var embed=document.createElement('div');
+    embed.className='calendly-inline-widget';
+    embed.setAttribute('data-url', url);
+    embed.style.cssText='min-width:280px;height:720px;';
+    container.appendChild(embed);
+
+    var fb=document.createElement('p');fb.style.cssText='margin:12px 0 0;text-align:center;font-size:13px;color:#64748b;';
+    fb.innerHTML='Kalender lädt nicht? <a href="'+url+'" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;">Termin in neuem Fenster wählen</a>.';
+    container.appendChild(fb);
+    container.appendChild(spamHintBox(emailStatus));
+
+    if(!document.getElementById('lv-calendly-widget-js')){
+      var s=document.createElement('script');s.id='lv-calendly-widget-js';
+      s.src='https://assets.calendly.com/assets/external/widget.js';s.async=true;
+      document.head.appendChild(s);
+    }
+  }
+
+  function inlineHost(){
+    var form=document.getElementById('application-form');
+    var statusEl=document.getElementById('form-status');
+    var host=document.getElementById('booking-inline-host');
+    if(!host){
+      host=document.createElement('div');host.id='booking-inline-host';
+      (form&&form.parentNode?form.parentNode:document.body).insertBefore(host, form?form.nextSibling:null);
+    }
+    if(form)form.style.display='none';
+    if(statusEl)statusEl.style.display='none';
+    host.scrollIntoView({behavior:'smooth',block:'start'});
+    return host;
+  }
+
   function showModal(opts){
     opts=opts||{};var isFast=!!opts.fast;var broker=opts.broker||null;var wa=String(opts.whatsapp||'').replace(/[^0-9]/g,'');
     var redirectUrl=opts.redirectUrl||'';var emailStatus=opts.emailStatus||null;var bookingError=opts.bookingError||'';
@@ -239,20 +290,17 @@
       var tokenMatch=redirectUrl.match(/\/buchen\/([^/?#]+)/);
       var token=tokenMatch?tokenMatch[1]:null;
       if(token){
-        var form=document.getElementById('application-form');
-        var statusEl=document.getElementById('form-status');
-        var host=document.getElementById('booking-inline-host');
-        if(!host){
-          host=document.createElement('div');host.id='booking-inline-host';
-          (form&&form.parentNode?form.parentNode:document.body).insertBefore(host, form?form.nextSibling:null);
-        }
-        if(form)form.style.display='none';
-        if(statusEl)statusEl.style.display='none';
-        host.scrollIntoView({behavior:'smooth',block:'start'});
-        renderBookingInline(host, token, {emailStatus:emailStatus});
+        renderBookingInline(inlineHost(), token, {emailStatus:emailStatus});
         return;
       }
       // Fallback: alte Modal-Variante mit Fenster-Link
+    }
+
+    // Vermittlung / Partner mit Calendly: Kalender ebenfalls direkt inline.
+    var calUrl=(broker&&broker.calendly_url)||(/calendly\.com/.test(redirectUrl)?redirectUrl:'');
+    if(calUrl&&/calendly\.com/.test(calUrl)){
+      renderCalendlyInline(inlineHost(), calUrl, broker, emailStatus);
+      return;
     }
 
     var ov=document.createElement('div');ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
