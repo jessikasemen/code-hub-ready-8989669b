@@ -21,6 +21,7 @@ import StepContract from "@/components/register/StepContract";
 import StepIdentity from "@/components/register/StepIdentity";
 import StepOptional from "@/components/register/StepOptional";
 import { usePortalTheme } from "@/hooks/use-portal-theme";
+import ApplicantLiveChat from "@/components/ApplicantLiveChat";
 
 
 const STORAGE_KEY = "onboarding_wizard_step";
@@ -528,6 +529,8 @@ function RegisterPage() {
 
   return (
     <div className={t.wizardPage}>
+      {/* Live-Chat: hilft genau denen, die im Wizard haengen bleiben. */}
+      <ApplicantLiveChat token={token} />
       {t.decor === "glow" && (
         <>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,hsl(var(--primary)/0.10),transparent_55%)] pointer-events-none" />

@@ -65,6 +65,7 @@ const navGroups: NavGroup[] = [
     label: "Kommunikation",
     items: [
       { title: "Chat", url: "/admin/chat", icon: MessageCircle, badgeKey: "unreadChat" },
+      { title: "Bewerber-Chat", url: "/admin/bewerber-chat", icon: MessageCircle },
       { title: "SMS", url: "/admin/sms", icon: Phone },
       { title: "E-Mail-Center", url: "/admin/email-center", icon: Mail },
     ],
@@ -87,6 +88,7 @@ const STAFF_ALLOWED_PREFIXES = [
   "/admin/tasks",
   "/admin/assignments",
   "/admin/chat",
+  "/admin/bewerber-chat",
 ];
 const STAFF_HOME = "/admin/tasks";
 const staffNavGroups: NavGroup[] = navGroups
