@@ -493,7 +493,8 @@ function AdminEmailCenterPage() {
             </div>
             <div className="text-[11px] text-muted-foreground mt-0.5">
               „Verschiedene Vorgänge“ ist normal: dieselbe Person hat zwei Bewerbungen oder Termine.
-              Nur „Echte Doppelung“ ist ein Fehler. Bereits bereinigte Doppelungen zählen mit.
+              „Geblockt“ heißt: der Doppelversand wurde verhindert, beim Empfänger kam nur eine Mail an.
+              Nur „Echte Doppelung“ ist ein Fehler.
               Vollständige Analyse mit{" "}
               <code>scripts/diagnose-duplicates.sh</code>.
             </div>
@@ -501,9 +502,11 @@ function AdminEmailCenterPage() {
               {duplicates.slice(0, 8).map(d => {
                 const badge = d.kind === "real"
                   ? { text: "Echte Doppelung", cls: "text-rose-700 dark:text-rose-400" }
-                  : d.kind === "manual"
-                    ? { text: "Handversand", cls: "text-amber-700 dark:text-amber-400" }
-                    : { text: `${d.vorgangCount} verschiedene Vorgänge`, cls: "text-muted-foreground" };
+                  : d.kind === "blocked"
+                    ? { text: `Doppelversand geblockt (${d.sent} zugestellt)`, cls: "text-emerald-700 dark:text-emerald-400" }
+                    : d.kind === "manual"
+                      ? { text: "Handversand", cls: "text-amber-700 dark:text-amber-400" }
+                      : { text: `${d.vorgangCount} verschiedene Vorgänge`, cls: "text-muted-foreground" };
                 return (
                   <div key={`${d.template}|${d.recipient}`} className="flex items-center gap-3 text-xs">
                     <span className="flex-1 truncate">{d.recipient}</span>
