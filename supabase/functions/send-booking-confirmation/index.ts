@@ -362,13 +362,15 @@ serve(async (req) => {
       // Letzte Sicherung gegen Doppelversand für genau DIESEN Termin.
       // Bewusst NICHT auf Bewerbungsebene sperren: nach einer Umbuchung muss
       // die Bestätigung für den neuen Termin rausgehen dürfen.
-      // Zusätzlich eine kurze Empfängersperre (2 h): sie fängt den Fall ab,
-      // dass derselbe Mensch über zwei Vorgänge parallel bestätigt wird —
-      // eine echte Umbuchung Stunden später bleibt möglich.
+      // Ebenso KEINE Empfänger-Zeitsperre (windowHours: 0): sie hat die
+      // Bestätigung nach einer Umbuchung innerhalb weniger Stunden komplett
+      // verschluckt — der Bewerber bekam für den neuen Termin gar keine Mail.
+      // Der Schutz bleibt trotzdem dicht: Sperre je appointment_id (unten)
+      // plus eindeutiger Ereignis-Claim in der Datenbank.
       const dup = await isDuplicateSend(admin, {
         recipient: app.email, templateName: REMINDER_KIND,
         metadataKey: "appointment_id", metadataValue: appt.id,
-        windowHours: 2,
+        windowHours: 0,
         // 'pending' mitzählen: fehlt die eindeutige Sperre in der Datenbank,
         // würde derselbe Termin sonst bei JEDEM Cron-Lauf erneut bestätigt.
         blockingStatuses: ["pending", "sent"],
