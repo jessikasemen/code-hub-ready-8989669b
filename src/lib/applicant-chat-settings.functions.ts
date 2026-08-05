@@ -29,7 +29,6 @@ export const setApplicantChatEnabled = createServerFn({ method: "POST" })
     await requireAdminStaff(context as any);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    await admin.from("system_settings").insert({ id: 1 }).select("id").maybeSingle().catch?.(() => null);
     const { error } = await admin
       .from("system_settings")
       .update({ applicant_chat_enabled: data.enabled })
