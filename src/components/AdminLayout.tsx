@@ -87,6 +87,7 @@ const STAFF_GROUPS = ["Aufträge", "Kommunikation"];
 const STAFF_ALLOWED_PREFIXES = [
   "/admin/tasks",
   "/admin/assignments",
+  "/admin/appointments",
   "/admin/chat",
 ];
 const STAFF_HOME = "/admin/tasks";
