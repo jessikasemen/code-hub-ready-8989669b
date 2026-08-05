@@ -107,7 +107,7 @@ function ModeSelector({
         )}
       >
         <Zap className="h-3.5 w-3.5" />
-        Was hast du gerade gemacht?
+        ????? Was machst dud a gerade rede doch deutsch mit mir
       </button>
       <button
         onClick={() => onSelect("human")}
@@ -142,7 +142,7 @@ function StatusBanner({ mode, leaderName, leaderOnline, escalated, justResolved 
       <div className="mx-4 mt-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10 flex items-center gap-2 shrink-0">
         <Zap className="h-3 w-3 text-primary shrink-0" />
         <p className="text-[11px] text-foreground/80 leading-tight">
-          Modus: <span className="font-medium">Was hast du gerade gemacht?</span>
+          Modus: <span className="font-medium">????? Was machst dud a gerade rede doch deutsch mit mir</span>
         </p>
       </div>
     );
