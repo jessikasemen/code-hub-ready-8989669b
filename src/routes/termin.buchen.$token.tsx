@@ -6,6 +6,7 @@ import { format, addDays, startOfDay, isSameDay, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CalendarCheck, CalendarClock, CalendarDays, Clock, Loader2, UserRound } from "lucide-react";
+import ApplicantLiveChat from "@/components/ApplicantLiveChat";
 import {
   getScheduleForApplicant,
   getAvailableSlots,
@@ -153,6 +154,7 @@ function BookingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40 px-4 py-6 sm:py-10">
+      <ApplicantLiveChat token={token} />
       <div className="mx-auto max-w-6xl">
         {rebook && (
           <div className="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground shadow-sm">

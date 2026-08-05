@@ -37,6 +37,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 import { Route as AdminAiSettingsRouteImport } from './routes/admin.ai-settings'
 import { Route as AdminAppointmentsRouteImport } from './routes/admin.appointments'
+import { Route as AdminBewerberChatRouteImport } from './routes/admin.bewerber-chat'
 import { Route as AdminBewerbungenRouteImport } from './routes/admin.bewerbungen'
 import { Route as AdminBewerbungstermineRouteImport } from './routes/admin.bewerbungstermine'
 import { Route as AdminBotsRouteImport } from './routes/admin.bots'
@@ -78,6 +79,7 @@ import { Route as AdminAssignmentsAssignmentIdRouteImport } from './routes/admin
 import { Route as AdminPersonenIdRouteImport } from './routes/admin.personen.$id'
 import { Route as AdminTasksIndexRouteImport } from './routes/admin.tasks.index'
 import { Route as ApiPublicAiChatRouteImport } from './routes/api/public/ai-chat'
+import { Route as ApiPublicApplicantChatRouteImport } from './routes/api/public/applicant-chat'
 import { Route as ApiPublicApplicationByTokenRouteImport } from './routes/api/public/application-by-token'
 import { Route as ApiPublicApplicationLookupRouteImport } from './routes/api/public/application-lookup'
 import { Route as ApiPublicApplicationsRouteImport } from './routes/api/public/applications'
@@ -234,6 +236,11 @@ const AdminAiSettingsRoute = AdminAiSettingsRouteImport.update({
 const AdminAppointmentsRoute = AdminAppointmentsRouteImport.update({
   id: '/appointments',
   path: '/appointments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBewerberChatRoute = AdminBewerberChatRouteImport.update({
+  id: '/bewerber-chat',
+  path: '/bewerber-chat',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminBewerbungenRoute = AdminBewerbungenRouteImport.update({
@@ -443,6 +450,11 @@ const ApiPublicAiChatRoute = ApiPublicAiChatRouteImport.update({
   path: '/api/public/ai-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicApplicantChatRoute = ApiPublicApplicantChatRouteImport.update({
+  id: '/api/public/applicant-chat',
+  path: '/api/public/applicant-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicApplicationByTokenRoute =
   ApiPublicApplicationByTokenRouteImport.update({
     id: '/api/public/application-by-token',
@@ -571,6 +583,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/ai-settings': typeof AdminAiSettingsRoute
   '/admin/appointments': typeof AdminAppointmentsRoute
+  '/admin/bewerber-chat': typeof AdminBewerberChatRoute
   '/admin/bewerbungen': typeof AdminBewerbungenRoute
   '/admin/bewerbungstermine': typeof AdminBewerbungstermineRoute
   '/admin/bots': typeof AdminBotsRoute
@@ -612,6 +625,7 @@ export interface FileRoutesByFullPath {
   '/admin/assignments/$assignmentId': typeof AdminAssignmentsAssignmentIdRoute
   '/admin/personen/$id': typeof AdminPersonenIdRoute
   '/api/public/ai-chat': typeof ApiPublicAiChatRoute
+  '/api/public/applicant-chat': typeof ApiPublicApplicantChatRoute
   '/api/public/application-by-token': typeof ApiPublicApplicationByTokenRoute
   '/api/public/application-lookup': typeof ApiPublicApplicationLookupRoute
   '/api/public/applications': typeof ApiPublicApplicationsRoute
@@ -658,6 +672,7 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/ai-settings': typeof AdminAiSettingsRoute
   '/admin/appointments': typeof AdminAppointmentsRoute
+  '/admin/bewerber-chat': typeof AdminBewerberChatRoute
   '/admin/bewerbungen': typeof AdminBewerbungenRoute
   '/admin/bewerbungstermine': typeof AdminBewerbungstermineRoute
   '/admin/bots': typeof AdminBotsRoute
@@ -699,6 +714,7 @@ export interface FileRoutesByTo {
   '/admin/assignments/$assignmentId': typeof AdminAssignmentsAssignmentIdRoute
   '/admin/personen/$id': typeof AdminPersonenIdRoute
   '/api/public/ai-chat': typeof ApiPublicAiChatRoute
+  '/api/public/applicant-chat': typeof ApiPublicApplicantChatRoute
   '/api/public/application-by-token': typeof ApiPublicApplicationByTokenRoute
   '/api/public/application-lookup': typeof ApiPublicApplicationLookupRoute
   '/api/public/applications': typeof ApiPublicApplicationsRoute
@@ -748,6 +764,7 @@ export interface FileRoutesById {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/ai-settings': typeof AdminAiSettingsRoute
   '/admin/appointments': typeof AdminAppointmentsRoute
+  '/admin/bewerber-chat': typeof AdminBewerberChatRoute
   '/admin/bewerbungen': typeof AdminBewerbungenRoute
   '/admin/bewerbungstermine': typeof AdminBewerbungstermineRoute
   '/admin/bots': typeof AdminBotsRoute
@@ -789,6 +806,7 @@ export interface FileRoutesById {
   '/admin/assignments/$assignmentId': typeof AdminAssignmentsAssignmentIdRoute
   '/admin/personen/$id': typeof AdminPersonenIdRoute
   '/api/public/ai-chat': typeof ApiPublicAiChatRoute
+  '/api/public/applicant-chat': typeof ApiPublicApplicantChatRoute
   '/api/public/application-by-token': typeof ApiPublicApplicationByTokenRoute
   '/api/public/application-lookup': typeof ApiPublicApplicationLookupRoute
   '/api/public/applications': typeof ApiPublicApplicationsRoute
@@ -838,6 +856,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/ai-settings'
     | '/admin/appointments'
+    | '/admin/bewerber-chat'
     | '/admin/bewerbungen'
     | '/admin/bewerbungstermine'
     | '/admin/bots'
@@ -879,6 +898,7 @@ export interface FileRouteTypes {
     | '/admin/assignments/$assignmentId'
     | '/admin/personen/$id'
     | '/api/public/ai-chat'
+    | '/api/public/applicant-chat'
     | '/api/public/application-by-token'
     | '/api/public/application-lookup'
     | '/api/public/applications'
@@ -925,6 +945,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/ai-settings'
     | '/admin/appointments'
+    | '/admin/bewerber-chat'
     | '/admin/bewerbungen'
     | '/admin/bewerbungstermine'
     | '/admin/bots'
@@ -966,6 +987,7 @@ export interface FileRouteTypes {
     | '/admin/assignments/$assignmentId'
     | '/admin/personen/$id'
     | '/api/public/ai-chat'
+    | '/api/public/applicant-chat'
     | '/api/public/application-by-token'
     | '/api/public/application-lookup'
     | '/api/public/applications'
@@ -1014,6 +1036,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/ai-settings'
     | '/admin/appointments'
+    | '/admin/bewerber-chat'
     | '/admin/bewerbungen'
     | '/admin/bewerbungstermine'
     | '/admin/bots'
@@ -1055,6 +1078,7 @@ export interface FileRouteTypes {
     | '/admin/assignments/$assignmentId'
     | '/admin/personen/$id'
     | '/api/public/ai-chat'
+    | '/api/public/applicant-chat'
     | '/api/public/application-by-token'
     | '/api/public/application-lookup'
     | '/api/public/applications'
@@ -1094,6 +1118,7 @@ export interface RootRouteChildren {
   TerminTokenRoute: typeof TerminTokenRoute
   BewerbungIndexRoute: typeof BewerbungIndexRoute
   ApiPublicAiChatRoute: typeof ApiPublicAiChatRoute
+  ApiPublicApplicantChatRoute: typeof ApiPublicApplicantChatRoute
   ApiPublicApplicationByTokenRoute: typeof ApiPublicApplicationByTokenRoute
   ApiPublicApplicationLookupRoute: typeof ApiPublicApplicationLookupRoute
   ApiPublicApplicationsRoute: typeof ApiPublicApplicationsRoute
@@ -1308,6 +1333,13 @@ declare module '@tanstack/react-router' {
       path: '/appointments'
       fullPath: '/admin/appointments'
       preLoaderRoute: typeof AdminAppointmentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/bewerber-chat': {
+      id: '/admin/bewerber-chat'
+      path: '/bewerber-chat'
+      fullPath: '/admin/bewerber-chat'
+      preLoaderRoute: typeof AdminBewerberChatRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/bewerbungen': {
@@ -1597,6 +1629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/applicant-chat': {
+      id: '/api/public/applicant-chat'
+      path: '/api/public/applicant-chat'
+      fullPath: '/api/public/applicant-chat'
+      preLoaderRoute: typeof ApiPublicApplicantChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/application-by-token': {
       id: '/api/public/application-by-token'
       path: '/api/public/application-by-token'
@@ -1792,6 +1831,7 @@ interface AdminRouteChildren {
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAiSettingsRoute: typeof AdminAiSettingsRoute
   AdminAppointmentsRoute: typeof AdminAppointmentsRoute
+  AdminBewerberChatRoute: typeof AdminBewerberChatRoute
   AdminBewerbungenRoute: typeof AdminBewerbungenRoute
   AdminBewerbungstermineRoute: typeof AdminBewerbungstermineRoute
   AdminBotsRoute: typeof AdminBotsRoute
@@ -1833,6 +1873,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminActivityRoute: AdminActivityRoute,
   AdminAiSettingsRoute: AdminAiSettingsRoute,
   AdminAppointmentsRoute: AdminAppointmentsRoute,
+  AdminBewerberChatRoute: AdminBewerberChatRoute,
   AdminBewerbungenRoute: AdminBewerbungenRoute,
   AdminBewerbungstermineRoute: AdminBewerbungstermineRoute,
   AdminBotsRoute: AdminBotsRoute,
@@ -1890,6 +1931,7 @@ const rootRouteChildren: RootRouteChildren = {
   TerminTokenRoute: TerminTokenRoute,
   BewerbungIndexRoute: BewerbungIndexRoute,
   ApiPublicAiChatRoute: ApiPublicAiChatRoute,
+  ApiPublicApplicantChatRoute: ApiPublicApplicantChatRoute,
   ApiPublicApplicationByTokenRoute: ApiPublicApplicationByTokenRoute,
   ApiPublicApplicationLookupRoute: ApiPublicApplicationLookupRoute,
   ApiPublicApplicationsRoute: ApiPublicApplicationsRoute,
@@ -1910,13 +1952,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
