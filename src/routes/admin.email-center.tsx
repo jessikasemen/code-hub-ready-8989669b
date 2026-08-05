@@ -160,7 +160,7 @@ function AdminEmailCenterPage() {
   const duplicates = useMemo(() => {
     type Grp = {
       template: string; recipient: string; count: number; last: string;
-      vorgaenge: Set<string>; manual: number; sources: Set<string>; cleaned: number;
+      vorgaenge: Set<string>; manual: number; sources: Set<string>; cleaned: number; sent: number;
     };
     const groups = new Map<string, Grp>();
     // Bereinigte/abgelöste Zeilen zählen mit: sie sind der Beleg dafür, dass
@@ -174,10 +174,11 @@ function AdminEmailCenterPage() {
       const key = `${r.template_name ?? "?"}|${(r.recipient_email ?? "").toLowerCase()}`;
       const g = groups.get(key) ?? {
         template: r.template_name ?? "?", recipient: r.recipient_email ?? "",
-        count: 0, last: r.created_at, vorgaenge: new Set<string>(), manual: 0, sources: new Set<string>(), cleaned: 0,
+        count: 0, last: r.created_at, vorgaenge: new Set<string>(), manual: 0, sources: new Set<string>(), cleaned: 0, sent: 0,
       };
       g.count++;
       if (isCleaned) g.cleaned++;
+      else g.sent++;
       if (r.created_at > g.last) g.last = r.created_at;
       if (vorgang) g.vorgaenge.add(vorgang);
       if (manual) g.manual++;
@@ -187,9 +188,17 @@ function AdminEmailCenterPage() {
     return [...groups.values()]
       .filter(g => g.count > 1)
       .map(g => {
-        // Verschiedene Vorgänge derselben Person = korrektes Verhalten.
-        const kind: "expected" | "manual" | "real" =
-          g.vorgaenge.size >= g.count ? "expected" : g.manual > 0 ? "manual" : "real";
+        // Nur tatsächlich ZUGESTELLTE Mails können eine echte Doppelung sein.
+        // Bereinigte/abgelöste Zeilen sind geblockte Versuche — der Schutz hat
+        // gegriffen, beim Empfänger kam nur eine Mail an.
+        const kind: "expected" | "manual" | "blocked" | "real" =
+          g.sent <= 1
+            ? "blocked"
+            : g.vorgaenge.size >= g.sent
+              ? "expected"
+              : g.manual > 0
+                ? "manual"
+                : "real";
         return { ...g, kind, vorgangCount: g.vorgaenge.size, source: [...g.sources].join(", ") };
       })
       .sort((a, b) => (a.kind === b.kind ? b.count - a.count : a.kind === "real" ? -1 : b.kind === "real" ? 1 : a.kind === "manual" ? -1 : 1));
