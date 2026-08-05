@@ -6,6 +6,7 @@ import {
   useParams as useTSParams,
   Outlet,
   Link as TSLink,
+  useMatchRoute,
 } from "@tanstack/react-router";
 import { forwardRef, useCallback, type ComponentProps, type ReactNode } from "react";
 
@@ -75,28 +76,29 @@ export interface NavLinkProps
 
 export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
   ({ className, children, end, activeClassName, pendingClassName, ...props }, ref) => {
-    const buildClass = (state: any) => {
-      const isActive = !!state?.isActive;
-      const base =
-        typeof className === "function"
-          ? (className as RenderFn)({ isActive, isPending: false })
-          : className;
-      const parts = [base, isActive ? activeClassName : undefined].filter(Boolean);
-      return parts.join(" ");
-    };
+    // TanStack Link expects a plain string className — a function would be
+    // forwarded to the DOM and silently drop all styling.
+    const matchRoute = useMatchRoute();
+    const to = (props as any).to as string | undefined;
+    const isActive = to
+      ? !!matchRoute({ to, fuzzy: !end } as any)
+      : false;
+    const base =
+      typeof className === "function"
+        ? (className as RenderFn)({ isActive, isPending: false })
+        : className;
+    const finalClass = [base, isActive ? activeClassName : undefined]
+      .filter(Boolean)
+      .join(" ");
     return (
       <TSLink
         {...(props as any)}
         ref={ref as any}
         activeOptions={end ? { exact: true } : undefined}
-        className={buildClass as any}
+        className={finalClass}
       >
         {typeof children === "function"
-          ? (((state: any) =>
-              (children as RenderFn)({
-                isActive: !!state?.isActive,
-                isPending: false,
-              })) as any)
+          ? (children as RenderFn)({ isActive, isPending: false })
           : children}
       </TSLink>
     );
