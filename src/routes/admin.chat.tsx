@@ -111,7 +111,7 @@ function AdminChatPage() {
     // Admin-Mitarbeiter: nur die zugewiesenen Marken/Tenants sichtbar machen.
     let allowedTenantIds: Set<string> | null = null;
     if (isStaff) {
-      const { data: accessRows } = await supabase
+      const { data: accessRows } = await (supabase as any)
         .from("staff_tenant_access")
         .select("tenant_id")
         .eq("user_id", user!.id);
