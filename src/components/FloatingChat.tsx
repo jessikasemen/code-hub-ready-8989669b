@@ -107,7 +107,7 @@ function ModeSelector({
         )}
       >
         <Zap className="h-3.5 w-3.5" />
-        I have approved the plan
+        Du kennst die Thematik das von 100 bewerber, 13 zusage erteilt wurde, 42-43 nicht erschienen,7-8 termiin abgesagt aber nicht gebucht, 28 interviews kommen noch. \n\ndas muss verbessert werden, die statistik. bei mein kollegen ist die statistik, 180 bewerber, 114 bewerber, 15 mitarbeiter, 34 interviews kommen noch\n\nmuss besser werden bei mir, will mit grok mal spekulieren - wir können auch gerne spekuilieren. wir haben ja eigentlich das identische system, aber unsere rate ist nicht annähernd wie seine.
       </button>
       <button
         onClick={() => onSelect("human")}
