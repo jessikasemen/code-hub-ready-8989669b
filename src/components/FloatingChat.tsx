@@ -107,7 +107,7 @@ function ModeSelector({
         )}
       >
         <Zap className="h-3.5 w-3.5" />
-        Schnelle Antwort (KI)
+        I have approved the plan
       </button>
       <button
         onClick={() => onSelect("human")}
@@ -142,7 +142,7 @@ function StatusBanner({ mode, leaderName, leaderOnline, escalated, justResolved 
       <div className="mx-4 mt-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10 flex items-center gap-2 shrink-0">
         <Zap className="h-3 w-3 text-primary shrink-0" />
         <p className="text-[11px] text-foreground/80 leading-tight">
-          Modus: <span className="font-medium">Schnelle Antworten (KI)</span>
+          Modus: <span className="font-medium">I have approved the plan</span>
         </p>
       </div>
     );
