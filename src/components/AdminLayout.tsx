@@ -89,6 +89,8 @@ const STAFF_ALLOWED_PREFIXES = [
   "/admin/assignments",
   "/admin/appointments",
   "/admin/chat",
+  // Mitarbeiter-Profil aus dem Chat heraus öffnen (kein Menüpunkt, nur direkte Seite)
+  "/admin/personen",
 ];
 const STAFF_HOME = "/admin/tasks";
 const staffNavGroups: NavGroup[] = navGroups
