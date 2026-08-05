@@ -26,6 +26,22 @@ function json(body: unknown, status = 200) {
 const Token = z.string().trim().min(8).max(128);
 const SendSchema = z.object({ token: Token, message: z.string().trim().min(1).max(4000) });
 
+// Globaler Schalter: der Admin kann den Bewerber-Chat im Portal aus- und
+// einblenden, ohne Deploy. Ist er aus, liefert der Endpunkt keine Nachrichten
+// und nimmt keine an.
+async function chatEnabled(admin: any): Promise<boolean> {
+  try {
+    const { data } = await admin
+      .from("system_settings")
+      .select("applicant_chat_enabled")
+      .eq("id", 1)
+      .maybeSingle();
+    return (data as any)?.applicant_chat_enabled !== false;
+  } catch {
+    return true;
+  }
+}
+
 export const Route = createFileRoute("/api/public/applicant-chat")({
   server: {
     handlers: {
@@ -36,6 +52,7 @@ export const Route = createFileRoute("/api/public/applicant-chat")({
         const parsed = Token.safeParse(url.searchParams.get("token"));
         if (!parsed.success) return json({ ok: false, error: "invalid_token" }, 400);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        if (!(await chatEnabled(supabaseAdmin))) return json({ ok: true, enabled: false, messages: [] });
         const { data, error } = await (supabaseAdmin.rpc as any)("applicant_chat_messages_for_token", {
           _token: parsed.data,
         });
@@ -43,7 +60,7 @@ export const Route = createFileRoute("/api/public/applicant-chat")({
           const invalid = /invalid_token/.test(error.message);
           return json({ ok: false, error: invalid ? "invalid_token" : error.message }, invalid ? 404 : 500);
         }
-        return json({ ok: true, messages: (data as any[]) ?? [] });
+        return json({ ok: true, enabled: true, messages: (data as any[]) ?? [] });
       },
 
       POST: async ({ request }) => {
@@ -53,6 +70,7 @@ export const Route = createFileRoute("/api/public/applicant-chat")({
         if (!parsed.success) return json({ ok: false, error: "invalid_body" }, 400);
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        if (!(await chatEnabled(supabaseAdmin))) return json({ ok: false, error: "chat_disabled" }, 403);
         const { data, error } = await (supabaseAdmin.rpc as any)("applicant_chat_send", {
           _token: parsed.data.token,
           _message: parsed.data.message,

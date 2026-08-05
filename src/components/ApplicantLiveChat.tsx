@@ -15,6 +15,7 @@ export default function ApplicantLiveChat({ token, title = "Fragen? Wir helfen d
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unseenStaff, setUnseenStaff] = useState(0);
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const seenRef = useRef(0);
 
@@ -24,6 +25,8 @@ export default function ApplicantLiveChat({ token, title = "Fragen? Wir helfen d
       const res = await fetch(`/api/public/applicant-chat?token=${encodeURIComponent(token)}`);
       const data = await res.json().catch(() => ({}));
       if (!data?.ok) return;
+      setEnabled(data.enabled !== false);
+      if (data.enabled === false) { setOpen(false); return; }
       const list = (data.messages ?? []) as Msg[];
       setMessages(list);
       const staffCount = list.filter((m) => m.sender === "staff").length;
@@ -74,7 +77,7 @@ export default function ApplicantLiveChat({ token, title = "Fragen? Wir helfen d
     }
   };
 
-  if (!token) return null;
+  if (!token || enabled !== true) return null;
 
   return (
     <>

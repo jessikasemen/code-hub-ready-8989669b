@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Send, MessageCircle, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getApplicantChatEnabled, setApplicantChatEnabled } from "@/lib/applicant-chat-settings.functions";
 
 interface Row {
   id: string;
@@ -53,7 +54,29 @@ function ApplicantChatAdminPage() {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState("");
+  const [chatOn, setChatOn] = useState<boolean | null>(null);
+  const [savingToggle, setSavingToggle] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try { const r = await getApplicantChatEnabled(); setChatOn(r.enabled); }
+      catch { setChatOn(null); }
+    })();
+  }, []);
+
+  const toggleChat = async (next: boolean) => {
+    setSavingToggle(true);
+    try {
+      const r = await setApplicantChatEnabled({ data: { enabled: next } });
+      setChatOn(r.enabled);
+      toast({ title: r.enabled ? "Chat eingeblendet" : "Chat ausgeblendet" });
+    } catch (e: any) {
+      toast({ title: "Nicht gespeichert", description: e?.message ?? "Unbekannter Fehler", variant: "destructive" });
+    } finally {
+      setSavingToggle(false);
+    }
+  };
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -147,10 +170,41 @@ function ApplicantChatAdminPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-1 text-2xl font-bold text-foreground">Bewerber-Chat</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Fragen von Bewerbern aus der Registrierung – hier antwortet ein Mensch, keine KI.
-      </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="mb-1 text-2xl font-bold text-foreground">Bewerber-Chat</h1>
+          <p className="text-sm text-muted-foreground">
+            Fragen von Bewerbern aus der Registrierung – hier antwortet ein Mensch, keine KI.
+            Nur im Portal (Fast-Track) sichtbar, nicht auf Vermittlungs-Seiten.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+          <div className="text-right">
+            <p className="text-sm font-semibold text-foreground">Chat im Portal</p>
+            <p className="text-xs text-muted-foreground">
+              {chatOn === null ? "lädt…" : chatOn ? "eingeblendet" : "ausgeblendet"}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={chatOn === true}
+            disabled={savingToggle || chatOn === null}
+            onClick={() => void toggleChat(!chatOn)}
+            className={cn(
+              "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50",
+              chatOn ? "bg-primary" : "bg-muted",
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-all",
+                chatOn ? "left-[1.375rem]" : "left-0.5",
+              )}
+            />
+          </button>
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
         <div className="rounded-xl border border-border bg-card">
