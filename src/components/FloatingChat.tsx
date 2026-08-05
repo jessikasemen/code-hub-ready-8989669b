@@ -107,7 +107,7 @@ function ModeSelector({
         )}
       >
         <Zap className="h-3.5 w-3.5" />
-        Schnelle Antwort (KI)
+        I have approved the plan
       </button>
       <button
         onClick={() => onSelect("human")}
